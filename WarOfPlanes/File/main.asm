@@ -1,15 +1,15 @@
 .386
 .model flat, STDCALL
 
-include	E:\桌面\汇编实验\Game\WarOfPlanes\Source\GraphWin.inc
+include	.\Source\GraphWin.inc
 include gdi32.inc
 include msimg32.inc
 includelib gdi32.lib
 includelib msimg32.lib
-includelib E:\桌面\汇编实验\Game\WarOfPlanes\Source\irvine32.lib
+includelib .\Source\irvine32.lib
 includelib kernel32.lib
 includelib user32.lib
-include E:\桌面\汇编实验\Game\WarOfPlanes\Source\bhw.inc
+include .\Source\bhw.inc
 includelib msvcrt.lib
 
 printf	PROTO	C :ptr sbyte,:VARARG
@@ -18,6 +18,7 @@ Crlf PROTO
 
 .data
 
+szScore BYTE "/",0
 szMsg	BYTE "%d",0ah,0
 WindowName BYTE "Star Trek - The Journey", 0
 className BYTE "Plane", 0
@@ -41,7 +42,8 @@ ps				PAINTSTRUCT <>
 
 ScoreText BYTE "000000", 0			; 被打印的生命值
 DrawHalfSpiritMask DWORD 32, 32, 16, 16, 16, 16, 32, 32, 0, 0, 0, 16, 0, 16, 0, 0
-WaterSpirit DWORD ? ; 水的图片，需要x / 8 + 3
+BulletPosFix DWORD 10, 0, -10, 0, 0, 10, 0, -10
+WaterSpirit DWORD ?					; 旋涡的图片，表示其正在播放第几帧，需要x / 8 + 3
 
 MenuType	 DWORD 0				; 0：游戏初始界面，1：关卡选择界面，2：游戏正在进行界面，3：游戏结算界面
 NumberOfItem DWORD 5,6,0,3			; 不同页面的选项文字数量。0界面：单人冒险、双人冒险、双人竞技、旅行模式、退出游戏，1界面：关卡1-5、返回上页，3界面：关卡得分、返回上页、退出游戏
@@ -191,6 +193,493 @@ RoundMap	DWORD  3, 3, 0, 3, 3, 3, 3, 0, 3, 3, 3, 3, 0, 3, 3
 
 .code
 
+; 判断飞机可否移动
+CheckPlaneCanGo			proc sign:DWORD
+						local xl:DWORD, xr:DWORD, yu:DWORD, yd:DWORD, colL:DWORD, colR:DWORD,rowU:DWORD,rowD:DWORD   ;左、右x坐标，上、下y坐标，左上角落于15*15的第col列第row行
+		
+		.IF sign<9
+			lea esi,Plane_Enemy
+			mov eax,sign
+			mov edx,0
+			mov ebx,44
+			mul ebx
+			add esi,eax
+		.ELSEIF sign==9
+			mov esi,offset Plane_Player1
+		.ELSE
+			mov esi,offset Plane_Player2
+		.ENDIF
+		mov ebx,[esi+12]
+		mov xl,ebx
+		mov xr,ebx
+		add xr,32
+		mov ebx,[esi+16]
+		mov yu,ebx
+		mov yd,ebx
+		add yd,32
+		.IF yu > 960
+			mov yu,0
+			mov yd,32
+		.ENDIF
+		.IF yd > 480
+			mov yd,480
+			mov yu,448
+		.ENDIF
+		.IF xl > 960
+			mov xl,0
+			mov xr,32
+		.ENDIF
+		.IF xr > 480
+			mov xr,480
+			mov xl,448
+		.ENDIF
+		mov edx,0
+		mov eax,xl
+		mov ebx,32
+		div ebx
+		mov colL,eax
+		.IF edx>0
+			add eax,1
+		.ENDIF
+		mov colR,eax
+		mov edx,0
+		mov eax,yu
+		mov ebx,32
+		div ebx
+		mov rowU,eax
+		.IF edx>0
+			add eax,1
+		.ENDIF
+		mov rowD,eax
+		mov ebx,[esi+20]
+		.IF ebx==1
+			mov eax,rowU
+			mov edx,0
+			mov ebx,15
+			mul ebx
+			mov edx,eax
+			add edx,colL
+			mov ebx,[Map+4*edx]
+			.IF ebx==4
+				mov eax,rowU
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==12
+				mov eax,rowU
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==3
+				mov eax,rowU
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ELSEIF ebx==11
+				mov eax,rowU
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ELSE
+				mov eax,rowU
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ENDIF
+			.IF yu<eax
+				mov yu,eax
+				add eax,32
+				mov yd,eax
+			.ENDIF
+			mov eax,rowU
+			mov edx,0
+			mov ebx,15
+			mul ebx
+			mov edx,eax
+			add edx,colR
+			mov ebx,[Map+4*edx]
+			.IF ebx==4
+				mov eax,rowU
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==12
+				mov eax,rowU
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==3
+				mov eax,rowU
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ELSEIF ebx==11
+				mov eax,rowU
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ELSE
+				mov eax,rowU
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ENDIF
+			.IF yu<eax
+				mov yu,eax
+				add eax,32
+				mov yd,eax
+			.ENDIF
+		.ELSEIF ebx==2
+			mov eax,rowD
+			mov edx,0
+			mov ebx,15
+			mul ebx
+			mov edx,eax
+			add edx,colL
+			mov ebx,[Map+4*edx]
+			.IF ebx==5
+				mov eax,rowD
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==13
+				mov eax,rowD
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==3
+				mov eax,rowD
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ELSEIF ebx==11
+				mov eax,rowD
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ELSE
+				mov eax,rowD
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ENDIF
+			.IF yd>eax
+				mov yd,eax
+				sub eax,32
+				mov yu,eax
+			.ENDIF
+			mov eax,rowD
+			mov edx,0
+			mov ebx,15
+			mul ebx
+			mov edx,eax
+			add edx,colR
+			mov ebx,[Map+4*edx]
+			.IF ebx==5
+				mov eax,rowD
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==13
+				mov eax,rowD
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==3
+				mov eax,rowD
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ELSEIF ebx==11
+				mov eax,rowD
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ELSE
+				mov eax,rowD
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ENDIF
+			.IF yd>eax
+				mov yd,eax
+				sub eax,32
+				mov yu,eax
+			.ENDIF
+		.ELSEIF ebx==3
+			mov eax,rowU
+			mov edx,0
+			mov ebx,15
+			mul ebx
+			mov edx,eax
+			add edx,colL
+			mov ebx,[Map+4*edx]
+			.IF ebx==6
+				mov eax,colL
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==14
+				mov eax,colL
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==3
+				mov eax,colL
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ELSEIF ebx==11
+				mov eax,colL
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ELSE
+				mov eax,colL
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ENDIF
+			.IF xl<eax
+				mov xl,eax
+				add eax,32
+				mov xr,eax
+			.ENDIF
+			mov eax,rowD
+			mov edx,0
+			mov ebx,15
+			mul ebx
+			mov edx,eax
+			add edx,colL
+			mov ebx,[Map+4*edx]
+			.IF ebx==6
+				mov eax,colL
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==14
+				mov eax,colL
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==3
+				mov eax,colL
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ELSEIF ebx==11
+				mov eax,colL
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ELSE
+				mov eax,colL
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ENDIF
+			.IF xl<eax
+				mov xl,eax
+				add eax,32
+				mov xr,eax
+			.ENDIF
+		.ELSE
+			mov eax,rowU
+			mov edx,0
+			mov ebx,15
+			mul ebx
+			mov edx,eax
+			add edx,colR
+			mov ebx,[Map+4*edx]
+			.IF ebx==7
+				mov eax,colR
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==15
+				mov eax,colR
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==3
+				mov eax,colR
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ELSEIF ebx==11
+				mov eax,colR
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ELSE
+				mov eax,colR
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ENDIF
+			.IF xr>eax
+				mov xr,eax
+				sub eax,32
+				mov xl,eax
+			.ENDIF
+			mov eax,rowD
+			mov edx,0
+			mov ebx,15
+			mul ebx
+			mov edx,eax
+			add edx,colR
+			mov ebx,[Map+4*edx]
+			.IF ebx==7
+				mov eax,colR
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==15
+				mov eax,colR
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,16
+			.ELSEIF ebx==3
+				mov eax,colR
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ELSEIF ebx==11
+				mov eax,colR
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+			.ELSE
+				mov eax,colR
+				mov edx,0
+				push ebx
+				mov ebx,32
+				mul ebx
+				pop ebx
+				add eax,32
+			.ENDIF
+			.IF xr>eax
+				mov xr,eax
+				sub eax,32
+				mov xl,eax
+			.ENDIF
+		.ENDIF
+		mov eax,xl
+		mov DWORD ptr[esi+12],eax
+		mov eax,yu
+		mov DWORD ptr[esi+16],eax
+		mov eax,1
+		ret
+		mov eax,0
+		ret
+
+CheckPlaneCanGo			endp
+
 ;参数列表：
 		;ebp+8：HWND hWnd,窗口句柄
 		;ebp+12：UINT message, 事件类型，比如按下键盘，移动鼠标
@@ -220,8 +709,8 @@ WindowProc:
 					cmp eax,WM_PAINT	;任何对窗口的更改，都会产生一个WM_PAINT消息（包括定时器也会触发WM_PAINT）
 					je PaintMessage
 		
-					;cmp eax,WM_TIMER	;计时器事件，每隔一段时间重新绘制窗口（基本和PaintMessage交替出现）
-					;je TimerMessage
+					cmp eax,WM_TIMER	;计时器事件，每隔一段时间重新绘制窗口（基本和PaintMessage交替出现）
+					je TimerMessage
 		
 					jmp OtherMessage	;交由默认回调函数处理
 					
@@ -343,7 +832,7 @@ WindowProc:
 					mov hdc,eax									; 返回当前窗口工作区DC句柄
 					invoke CreateCompatibleDC,eax
 					mov hdcPic,eax								; 兼容内存DC句柄
-					invoke LoadImageA,hInstance,1002,0,0,0,0	; 加载1001号资源，即bmp位图
+					invoke LoadImageA,hInstance,1002,0,0,0,0	; 加载1002号资源，即bmp位图
 					mov hbitmap,eax								; 返回资源图句柄
 					invoke SelectObject,hdcPic,hbitmap
 					invoke CreateCompatibleDC,hdc
@@ -379,11 +868,11 @@ WindowProc:
 					invoke EndPaint,hMainWnd,offset ps
 					jmp WinProcExit
 
-	;TimerMessage:
-					;invoke printf,offset szMsg,2
-					;call TimerTick								; TimerTick是运行游戏运行逻辑的函数
-					;invoke RedrawWindow,hMainWnd,NULL,NULL,1
-					;jmp WinProcExit
+	TimerMessage:
+					invoke printf,offset szMsg,2
+					call TimerTrick								; TimerTick是运行游戏运行逻辑的函数
+					invoke RedrawWindow,hMainWnd,NULL,NULL,1
+					jmp WinProcExit
 
 	OtherMessage:	
 					invoke DefWindowProc,[ebp+8],[ebp+12],[ebp+16],[ebp+20]
@@ -527,7 +1016,51 @@ DrawUI:
 					push 256
 					push 4
 					call DrawLine
+
+					; 绘制游戏评分
+					mov eax,[Score]			; 玩家1对应的分数
+					mov esi,offset ScoreText; esi对应分数板字符串
+					add esi,5
+					mov ecx,6				; 分数是6位数字
+					mov ebx,10
+
+			DrawScoreTextPlayer1Loop:
+					; 将score中的数字转化为字符后存在对应的scoretest中
+					mov edx,0
+					div ebx
+					add edx,30h				; 分数(eax)除以10 余数在edx，数字转化为字符
+					mov [esi],dl
+					dec esi
+					loop DrawScoreTextPlayer1Loop
+
+					;绘制分数板的过程
+					invoke TextOut,hdcMem,330,138,offset ScoreText,6
+
+					cmp IfDouble,0
+					je DrawResultMenuOption
+
+					invoke TextOut,hdcMem,382,138,offset szScore,1
+
+					mov eax,[Score+4]			; 玩家2对应的分数
+					mov esi,offset ScoreText; esi对应分数板字符串
+					add esi,5
+					mov ecx,6				; 分数是6位数字
+					mov ebx,10
+
+			DrawScoreTextPlayer2Loop:
+					; 将score中的数字转化为字符后存在对应的scoretest中
+					mov edx,0
+					div ebx
+					add edx,30h				; 分数(eax)除以10 余数在edx，数字转化为字符
+					mov [esi],dl
+					dec esi
+					loop DrawScoreTextPlayer2Loop
+
+					;绘制分数板的过程
+					invoke TextOut,hdcMem,392,138,offset ScoreText,6
+
 					jmp DrawResultMenuOption
+
 
 		DrawGameMode:
 					call DrawGround						; 绘制宇宙背景
@@ -733,8 +1266,8 @@ EnterInMenu:
 		cmp SelectItem,2
 		mov IfDouble,1
 		mov GameMode,1
-		mov Round,6								; 双人竞技地图，唯一地形
-		je EnterToEndGame					    ; 2号选项，对应双人竞技，直接进入游戏（暂时改为退出，后续完善）
+		mov Round,0								; 双人竞技地图，唯一地形
+		je EnterToGame							; 2号选项，对应双人竞技，直接进入游戏（暂时位双人冒险补充关，后续完善）
 		cmp SelectItem,3						
 		mov IfDouble,0
 		mov GameMode,2
@@ -746,8 +1279,9 @@ EnterInMenu:
 		cmp SelectItem,5						; 选项5，返回上层
 		je EnterToMain
 		; 剩下的0、1、2、3、4选项都是进入游戏，关卡对应1、2、3、4、5只不过游戏模式不同
-		mov ebx,SelectItem+1
-		mov Round,ebx
+		mov edx,[SelectItem]
+		add edx,1
+		mov Round,edx
 		jmp EnterToGame							; 转移到游戏界面，在转换过程中要对GameMode和IsDoublePlayer进行赋值，赋值后统一切换到界面2
 		jmp EnterInMenuReturn
 
@@ -806,17 +1340,19 @@ NewRound:
 		mov WaitingTime,-1
 		; 玩家1
 		mov [Plane_Player1+4],1			; 初始伤害
-		mov [Plane_Player1+12],128		; X坐标
-		mov [Plane_Player1+16],448		; Y坐标
-		mov [Plane_Player1+20],1		; 初始朝向为上
-		mov [Plane_Player1+24],7		; 子弹状态
+		mov [Plane_Player1+8],3			; 速度
+		mov [Plane_Player1+12],64		; X坐标
+		mov [Plane_Player1+16],32		; Y坐标
+		mov [Plane_Player1+20],2		; 初始朝向为上
+		mov [Plane_Player1+24],0		; 子弹状态
 		mov [Plane_Player1+40],1
 		; 玩家2
 		mov [Plane_Player2+4],1			; 初始伤害
+		mov [Plane_Player2+8],3			; 速度
 		mov [Plane_Player2+12],128		; X坐标
 		mov [Plane_Player2+16],448		; Y坐标
 		mov [Plane_Player2+20],1		; 初始朝向为上
-		mov [Plane_Player2+24],7		; 子弹状态
+		mov [Plane_Player2+24],0		; 子弹状态
 		mov [Plane_Player2+40],2
 		; 初始化敌人数量
 	InitEnemyNum:
@@ -842,7 +1378,7 @@ NewRound:
 		loop RemoveEnemyPlane
 		
 		; 初始化地图
-		mov eax,[Round]
+		mov eax,Round
 		mov ebx,225*4
 		mul ebx
 		mov ebx,eax						; ebx = Round×225×4，锁定了当前Round在RoundMap中的偏移量
@@ -851,7 +1387,6 @@ NewRound:
 		mov eax,[RoundMap+ebx+ecx*4-4]
 		mov [Map+ecx*4-4],eax
 		loop SetMap
-
 		ret
 
 
@@ -921,14 +1456,15 @@ DrawWall:
 		add edx,80
 		
 		; 判断地图矩阵中的值属于哪一个，然后去对应的函数进行绘制
-		test [Map+ecx*4-4],4 
-		jnz DrawWallHalf
 		cmp [Map+ecx*4-4],3						; 陨石
 		je DrawWallBlock
 		cmp [Map+ecx*4-4],11					; 星球
 		je DrawWallMetal
 		cmp [Map+ecx*4-4],8						; 守护物资
 		je DrawWallBase
+		cmp [Map+ecx*4-4],4 
+		jnl DrawWallHalf
+		
 		
 	DrawWallDoLoop:
 		loop DrawWallLoop
@@ -962,8 +1498,8 @@ DrawWall:
 		jmp DrawWallDoLoop
 		
 	DrawWallHalf:
-		test [Map+ecx*4-4],8			
-		jnz DrawMetalWallHalf
+		cmp [Map+ecx*4-4],12			
+		jnl DrawMetalWallHalf
 		mov ebx,[Map+ecx*4-4]
 		and ebx,3
 
@@ -994,12 +1530,10 @@ DrawWall:
 ; 绘制我方和敌役飞机、子弹
 DrawPlaneAndBullet:
 		; 玩家1
-		mov esi,offset Plane_Player1
-		push esi
 		mov eax,0
-		cmp [esi],eax
+		cmp DWORD ptr[Plane_Player1],eax
 		je BulletOfPlayer1
-		mov edx,[esi+20]
+		mov edx,[Plane_Player1+20]
 		.IF edx==1
 			mov eax,13h
 		.ELSEIF edx==2
@@ -1009,33 +1543,31 @@ DrawPlaneAndBullet:
 		.ELSE
 			mov eax,10h
 		.ENDIF
-		mov ebx,[esi+12]
+		mov ebx,[Plane_Player1+12]
 		add ebx,80
-		push [esi+16]
+		push [Plane_Player1+16]
 		push ebx
 		push eax
 		call DrawSpirit
 	BulletOfPlayer1:
 		mov eax,0
-		cmp [esi+24],eax
+		cmp [Plane_Player1+24],eax
 		je DrawPlayer2
-		mov eax,[esi+24]
+		mov eax,[Plane_Player1+24]
 		add eax,54
-		mov ebx,[esi+28]
+		mov ebx,[Plane_Player1+28]
 		add ebx,80
-		push [esi+32]
+		push [Plane_Player1+32]
 		push ebx
 		push eax
 		call DrawSpirit
 
 		; 玩家2
 	DrawPlayer2:
-		mov esi,offset Plane_Player2
-		push esi
 		mov eax,0
-		cmp [esi],eax
+		cmp [Plane_Player2],eax
 		je BulletOfPlayer2
-		mov edx,[esi+20]
+		mov edx,[Plane_Player2+20]
 		.IF edx==1
 			mov eax,1Bh
 		.ELSEIF edx==2
@@ -1045,21 +1577,21 @@ DrawPlaneAndBullet:
 		.ELSE
 			mov eax,18h
 		.ENDIF
-		mov ebx,[esi+12]
+		mov ebx,[Plane_Player2+12]
 		add ebx,80
-		push [esi+16]
+		push [Plane_Player2+16]
 		push ebx
 		push eax
 		call DrawSpirit
 	BulletOfPlayer2:
 		mov eax,0
-		cmp [esi+24],eax
+		cmp [Plane_Player2+24],eax
 		je DrawEnemy
-		mov eax,[esi+24]
+		mov eax,[Plane_Player2+24]
 		add eax,54
-		mov ebx,[esi+28]
+		mov ebx,[Plane_Player2+28]
 		add ebx,80
-		push [esi+32]
+		push [Plane_Player2+32]
 		push ebx
 		push eax
 		call DrawSpirit
@@ -1111,7 +1643,7 @@ DrawPlaneAndBullet:
 	DrawEnemyLoopContinue:
 		pop esi
 		add esi,44
-		loop DrawEnemy
+		loop DrawEnemyLoop
 		ret
 
 ; 游戏进行界面右侧的功能栏
@@ -1141,12 +1673,7 @@ DrawSideBar:
 		
 		mov eax,[esp]
 		add eax,8
-		push 1
-		push offset ScoreText
-		push eax
-		push 608		
-		push hdcMem
-		call TextOut	;输出文本
+		invoke TextOut,hdcMem,608,eax,offset ScoreText,1
 		
 		pop eax
 		pop ecx
@@ -1179,13 +1706,11 @@ DrawSideBar:
 		
 		mov eax,[esp]
 		add eax,8
-		push 1
-		push offset ScoreText
-		push eax
-		push 608		
-		push hdcMem
-		call TextOut	;输出文本
-
+		invoke TextOut,hdcMem,608,eax,offset ScoreText,1
+		pop eax
+		pop ecx
+		pop ebx
+		pop esi
 
 	NoDoubleToDraw:
 		mov eax,0
@@ -1220,19 +1745,7 @@ DrawSideBar:
 		mov edi,[esp]
 		sal edi,6
 		add edi,360
-		push 6
-		push offset ScoreText
-		push edi
-		push 576
-		push hdcMem
-		call TextOut
-
-		push 2Fh
-		push 2Eh
-		push 320
-		push 568
-		push 2
-		call DrawLine
+		invoke TextOut,hdcMem,576,edi,offset ScoreText,6
 		
 		pop eax
 		cmp eax,0
@@ -1241,7 +1754,122 @@ DrawSideBar:
 
 		ret
 
+; TimerTrick函数根据按下的按键修改状态，修改后交由PaintMessage里的DrawUI刷新
+TimerTrick:
+		cmp WaitingTime,0			; 用来判断不同状态，0表示游戏结束
+		jl DontWait
+		je ChangeGame
+		dec WaitingTime
+		jmp DontWait
+	ChangeGame:
+		mov ebx,[Plane_Player1]
+		mov edx,[Plane_Player2]
+		.IF GameMode==1
+			cmp ebx,0
+			je ToOver
+			cmp ecx,0
+			jne NotGameOver
+		.ELSE
+			cmp ebx,0
+			jne NotGameOver
+		.ENDIF
+	ToOver:
+		mov MenuType,3				; 游戏结算
+		mov SelectItem,0
+	NotGameOver:
+		call NewRound				; 说明此时可以开始新的一轮游戏
+		mov WaitingTime,-1
+	DontWait:
+		inc WaterSpirit
+		and WaterSpirit,0Fh
 
+		; 比较是否处于游戏状态
+		cmp MenuType,2
+		je TimerTrickDontReturn
+		jmp TimerTrickReturn
+
+	TimerTrickDontReturn:
+		cmp KeySign_Up,1
+		jne TTDR@Up
+		mov ebx,[Plane_Player1+8]
+		sub [Plane_Player1+16],ebx
+		mov [Plane_Player1+20],1
+		; CheckPlaneCanGo判断目标是否可以移动，接收一个参数，0到7表示8个敌人，9和10表示玩家1和2
+		invoke CheckPlaneCanGo,9
+	TTDR@Up:
+		cmp KeySign_Down,1
+		jne TTDR@Down
+		mov ebx,[Plane_Player1+8]
+		add [Plane_Player1+16],ebx
+		mov [Plane_Player1+20],2
+		invoke CheckPlaneCanGo,9
+	TTDR@Down:
+		cmp KeySign_Left,1
+		jne TTDR@Left
+		mov ebx,[Plane_Player1+8]
+		sub [Plane_Player1+12],ebx
+		mov [Plane_Player1+20],3
+		invoke CheckPlaneCanGo,9
+	TTDR@Left:
+		cmp KeySign_Right,1
+		jne TTDR@Right
+		mov ebx,[Plane_Player1+8]
+		add [Plane_Player1+12],ebx
+		mov [Plane_Player1+20],4
+		invoke CheckPlaneCanGo,9
+	TTDR@Right:
+		cmp KeySign_Space,1
+		je HaveSpace
+		cmp IfDouble,0
+		jne TTDR@Space
+	HaveSpace:
+		cmp DWORD ptr[Plane_Player1+24],0
+		jne TTDR@Space
+		cmp DWORD ptr[Plane_Player1],0
+		je TTDR@Space
+		mov edx,[Plane_Player1+20]
+		mov [Plane_Player1+24],1
+		mov eax,[Plane_Player1+12]
+		add eax,[BulletPosFix+16+4*edx]
+		mov [Plane_Player1+28],eax
+		mov eax,[Plane_Player1+16]
+		add eax,[BulletPosFix+16+4*edx]
+		mov [Plane_Player1+32],eax
+	TTDR@Space:
+		cmp KeySign_W,1
+		jne TTDR@W
+		mov ebx,[Plane_Player2+8]
+		sub [Plane_Player2+16],ebx
+		mov [Plane_Player2+20],1
+		invoke CheckPlaneCanGo,10
+	TTDR@W:
+		cmp KeySign_S,1
+		jne TTDR@S
+		mov ebx,[Plane_Player2+8]
+		add [Plane_Player2+16],ebx
+		mov [Plane_Player2+20],2
+		invoke CheckPlaneCanGo,10
+	TTDR@S:
+		cmp KeySign_A,1
+		jne TTDR@A
+		mov ebx,[Plane_Player2+8]
+		sub [Plane_Player2+12],ebx
+		mov [Plane_Player2+20],3
+		invoke CheckPlaneCanGo,10
+	TTDR@A:
+		cmp KeySign_D,1
+		jne TTDR@D
+		mov ebx,[Plane_Player2+8]
+		add [Plane_Player2+12],ebx
+		mov [Plane_Player2+20],4
+		invoke CheckPlaneCanGo,10
+	TTDR@D:
+	TimerTrickReturn:
+		ret
+		
+
+		
+		
 
 main:
 		call Randomize

@@ -1,7 +1,6 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
-#include <winresrc.h>
 /////////////////////////////////////////////////////////////////////////////
 // 中文(简体，中国) resources
 
@@ -26,7 +25,9 @@ LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
 
 1001                    BITMAP                  "plane.bmp"
 
-1002                    BITMAP                  "source24.bmp"
+1003                    BITMAP                  "source24.bmp"
+
+1002                    BITMAP                  "source24new.bmp"
 
 
 #ifdef APSTUDIO_INVOKED
