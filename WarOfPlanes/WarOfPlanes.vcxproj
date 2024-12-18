@@ -151,6 +151,8 @@
     <Image Include="File\plane.bmp" />
     <Image Include="File\plane.ico" />
     <Image Include="File\source24.bmp" />
+    <Image Include="File\source24new.bmp" />
+    <Image Include="source24new.bmp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="File\plane.rc" />
