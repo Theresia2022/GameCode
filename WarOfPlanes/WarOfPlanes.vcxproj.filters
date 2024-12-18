@@ -19,4 +19,38 @@
       <Filter>源文件</Filter>
     </MASM>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="File\plane.bmp">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="File\plane.ico">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="File\source24.bmp">
+      <Filter>资源文件</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="File\plane.rc">
+      <Filter>资源文件</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source\bhw.inc">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="Source\GraphWin.inc">
+      <Filter>头文件</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="Source\Irvine32.lib">
+      <Filter>头文件</Filter>
+    </Library>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="File\resource.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
 </Project>
