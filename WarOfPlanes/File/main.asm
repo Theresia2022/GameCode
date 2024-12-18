@@ -27,9 +27,9 @@ imgName BYTE "djb.bmp", 0
 ; 创建一个窗口，基于窗口类来实现，必须确定处理窗口的窗口过程(回调函数)。其他参数初始为NULL，后续会在WinMain主函数中填充
 MainWin WNDCLASS <NULL, WindowProc, NULL, NULL, NULL, NULL, NULL, COLOR_WINDOW, NULL, className>
 
-message MSGStruct <>	;消息结构，用户存放获取的message
+message MSGStruct <>	; 消息结构，用户存放获取的message
 winRect RECT <>
-hMainWnd DWORD ?		;主窗口的句柄
+hMainWnd DWORD ?		; 主窗口的句柄
 hInstance DWORD ?
 
 hbitmap			DWORD ?		;图片的句柄
